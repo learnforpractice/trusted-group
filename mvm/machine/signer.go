@@ -26,6 +26,24 @@ func (m *Machine) loopSignGroupEvents(ctx context.Context) {
 			e.Signature = nil
 			logger.Verbosef("Machine.loopSignGroupEvents() => %v", e)
 			msg := e.Encode()
+			scheme := tbls.NewThresholdSchemeOnG1(en256.NewSuiteG2())
+			partial, err := scheme.Sign(m.share, msg)
+			if err != nil {
+				panic(err)
+			}
+			lst := sm[hex.EncodeToString(partial)].Add(time.Minute * 5)
+			if lst.Before(time.Now()) {
+				sm[hex.EncodeToString(partial)] = time.Now()
+
+				e.Signature = partial
+				threshold := make([]byte, 8)
+				binary.BigEndian.PutUint64(threshold, uint64(lst.UnixNano()))
+				err = m.messenger.SendMessage(ctx, append(e.Encode(), threshold...))
+				if err != nil {
+					panic(err)
+				}
+			}
+
 			partials, err := m.store.ReadPendingGroupEventSignatures(e.Process, e.Nonce)
 			if err != nil {
 				panic(err)
@@ -48,25 +66,6 @@ func (m *Machine) loopSignGroupEvents(ctx context.Context) {
 					panic(err)
 				}
 				continue
-			}
-
-			scheme := tbls.NewThresholdSchemeOnG1(en256.NewSuiteG2())
-			partial, err := scheme.Sign(m.share, msg)
-			if err != nil {
-				panic(err)
-			}
-			lst := sm[hex.EncodeToString(partial)].Add(time.Minute * 5)
-			if checkSignedWith(partials, partial) && lst.After(time.Now()) {
-				continue
-			}
-			sm[hex.EncodeToString(partial)] = time.Now()
-
-			e.Signature = partial
-			threshold := make([]byte, 8)
-			binary.BigEndian.PutUint64(threshold, uint64(time.Now().UnixNano()))
-			err = m.messenger.SendMessage(ctx, append(e.Encode(), threshold...))
-			if err != nil {
-				panic(err)
 			}
 
 			if checkSignedWith(partials, partial) {
