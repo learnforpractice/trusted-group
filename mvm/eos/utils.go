@@ -107,7 +107,7 @@ func BuildEventTransaction(mixincontract, eventPublisher, address string, event 
 		logger.Verbosef("add process event %s", event.Process)
 		addprocess := NewAddProcess(address, event.Process, event.Signature)
 		action = chain.NewAction(
-			chain.PermissionLevel{Actor: chain.NewName(eventPublisher), Permission: chain.NewName("active")},
+			&chain.PermissionLevel{Actor: chain.NewName(eventPublisher), Permission: chain.NewName("active")},
 			chain.NewName(mixincontract),
 			chain.NewName("addprocess"),
 			addprocess,
@@ -118,7 +118,7 @@ func BuildEventTransaction(mixincontract, eventPublisher, address string, event 
 			return nil, err
 		}
 		action = chain.NewAction(
-			chain.PermissionLevel{Actor: chain.NewName(eventPublisher), Permission: chain.NewName("active")},
+			&chain.PermissionLevel{Actor: chain.NewName(eventPublisher), Permission: chain.NewName("active")},
 			chain.NewName(address),
 			chain.NewName("onevent"),
 			txEvent,

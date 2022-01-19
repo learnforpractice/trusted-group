@@ -676,7 +676,7 @@ func (e *Engine) loopExecGroupEvents(address string) {
 		refBlockId := e.GetRefBlockId()
 		tx.SetReferenceBlock(refBlockId)
 		action := chain.NewAction(
-			chain.PermissionLevel{Actor: executor, Permission: chain.NewName("active")},
+			&chain.PermissionLevel{Actor: executor, Permission: chain.NewName("active")},
 			chain.NewName(address),
 			chain.NewName("exec"),
 			executor,
@@ -759,7 +759,7 @@ func (e *Engine) loopDoWorks(address string) {
 			refBlockId := e.GetRefBlockId()
 			tx.SetReferenceBlock(refBlockId)
 			action := chain.NewAction(
-				chain.PermissionLevel{Actor: executor, Permission: chain.NewName("active")},
+				&chain.PermissionLevel{Actor: executor, Permission: chain.NewName("active")},
 				chain.NewName(address),
 				chain.NewName("dowork"),
 				executor,
