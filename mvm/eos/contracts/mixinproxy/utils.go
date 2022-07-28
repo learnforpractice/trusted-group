@@ -17,13 +17,13 @@ type Signer struct {
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerDB := NewSignerDB(MTG_XIN, MTG_XIN)
+	signerTable := NewSignerTable(MTG_XIN, MTG_XIN)
 	signers := make([]*Signer, 0, 10)
-	it := signerDB.Lowerbound(0)
+	it := signerTable.Lowerbound(0)
 	for it.IsOk() {
-		item := signerDB.GetByIterator(it)
+		item := signerTable.GetByIterator(it)
 		signers = append(signers, item)
-		it, _ = signerDB.Next(it)
+		it, _ = signerTable.Next(it)
 	}
 
 	threshold := len(signers)*2/3 + 1

@@ -16,17 +16,17 @@ type currency_stats struct {
 	issuer     chain.Name
 }
 
-func NewAccountDB(code chain.Name, scope chain.Name) *accountDB {
-	return NewaccountDB(code, scope)
+func NewAccountTable(code chain.Name, scope chain.Name) *accountTable {
+	return NewaccountTable(code, scope)
 }
 
-func NewCurrencyStatsDB(code chain.Name, scope chain.Name) *currency_statsDB {
-	return Newcurrency_statsDB(code, scope)
+func NewCurrencyStatsTable(code chain.Name, scope chain.Name) *currency_statsTable {
+	return Newcurrency_statsTable(code, scope)
 }
 
 func GetBalance(owner chain.Name, tokenAccount chain.Name, sym chain.Symbol) chain.Asset {
-	accountDB := NewAccountDB(tokenAccount, owner)
-	it, to := accountDB.Get(sym.Code())
+	accountTable := NewAccountTable(tokenAccount, owner)
+	it, to := accountTable.GetByKey(sym.Code())
 	if it.IsOk() {
 		return to.balance
 	} else {

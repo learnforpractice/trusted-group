@@ -43,8 +43,8 @@ type Contract struct {
 }
 
 func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
-	db := NewProcessDB(MTG_XIN, MTG_XIN)
-	it, record := db.Get(receiver.N)
+	db := NewProcessTable(MTG_XIN, MTG_XIN)
+	it, record := db.GetByKey(receiver.N)
 	assert(it.IsOk(), "process not found!")
 
 	c := &Contract{receiver, firstReceiver, action, record.process}
@@ -52,8 +52,8 @@ func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
 }
 
 func (c *Contract) GetMixinAssetId(sym chain.Symbol) (chain.Uint128, bool) {
-	db := NewMixinAssetDB(c.self, c.self)
-	it, asset := db.Get(sym.Code())
+	db := NewMixinAssetTable(c.self, c.self)
+	it, asset := db.GetByKey(sym.Code())
 	if !it.IsOk() {
 		return chain.Uint128{}, false
 	}
@@ -61,8 +61,8 @@ func (c *Contract) GetMixinAssetId(sym chain.Symbol) (chain.Uint128, bool) {
 }
 
 func (c *Contract) GetTransferFee(sym chain.Symbol) *chain.Asset {
-	feeDB := NewTransferFeeDB(c.self, c.self)
-	it, transferFee := feeDB.Get(sym.Code())
+	feeTable := NewTransferFeeTable(c.self, c.self)
+	it, transferFee := feeTable.GetByKey(sym.Code())
 	if !it.IsOk() {
 		return &chain.Asset{0, sym}
 	}
@@ -70,13 +70,13 @@ func (c *Contract) GetTransferFee(sym chain.Symbol) *chain.Asset {
 }
 
 func (c *Contract) AddFee(fee *chain.Asset) {
-	totalFeeDB := NewTotalFeeDB(c.self, c.self)
-	it, record := totalFeeDB.Get(fee.Symbol.Code())
+	totalFeeTable := NewTotalFeeTable(c.self, c.self)
+	it, record := totalFeeTable.GetByKey(fee.Symbol.Code())
 	if it.IsOk() {
 		record.total.Amount += fee.Amount
-		totalFeeDB.Update(it, record, chain.SamePayer)
+		totalFeeTable.Update(it, record, chain.SamePayer)
 	} else {
-		totalFeeDB.Store(&TotalFee{*fee}, c.self)
+		totalFeeTable.Store(&TotalFee{*fee}, c.self)
 	}
 }
 
@@ -92,7 +92,7 @@ func (c *Contract) CheckNonce(eventNonce uint64) {
 	nonce := c.GetNonce()
 	assert(eventNonce >= nonce, "bad nonce!")
 
-	db := NewSubmittedEventDB(c.self, c.self)
+	db := NewSubmittedEventTable(c.self, c.self)
 	it := db.Find(eventNonce)
 	assert(!it.IsOk(), "event already exists!")
 	db.Store(&SubmittedEvent{eventNonce}, c.self)
@@ -123,22 +123,23 @@ func (c *Contract) CheckNonce(eventNonce uint64) {
 }
 
 func (c *Contract) StoreNonce(eventNonce uint64) {
-	db := NewSubmittedEventDB(c.self, c.self)
+	db := NewSubmittedEventTable(c.self, c.self)
 	it := db.Find(eventNonce)
 	assert(!it.IsOk(), "event already exists!")
 	db.Store(&SubmittedEvent{eventNonce}, c.self)
 }
 
 func (c *Contract) HandleEventNoNonceChecking(event *TxEvent) {
-	assetDB := NewMixinAssetDB(c.self, c.self)
-	idxDB := assetDB.GetIdxDBByAssetId()
-	itAssetId := idxDB.Find(event.asset)
+	assetTable := NewMixinAssetTable(c.self, c.self)
+	idxTable := assetTable.GetIdxTableByasset_id()
+	itAssetId := idxTable.Find(event.asset)
 	if !itAssetId.IsOk() {
 		//c.Refund(event, "unsupported asset id, refund!")
 		return
 	}
 
-	if event.amount.Cmp(chain.NewUint128(chain.MAX_AMOUNT, 0)) > 0 {
+	max := chain.NewUint128(chain.MAX_AMOUNT, 0)
+	if event.amount.Cmp(&max) > 0 {
 		c.ShowError("amount too large")
 		return
 	}
@@ -158,7 +159,8 @@ func (c *Contract) HandleEventNoNonceChecking(event *TxEvent) {
 
 	quantity.Amount -= fee.Amount
 	//deduct fee from event, in case of refundment
-	event.amount.Sub(&event.amount, chain.NewUint128(uint64(feeAmount), 0))
+	_feeAmount := chain.NewUint128(uint64(feeAmount), 0)
+	event.amount.Sub(&event.amount, &_feeAmount)
 
 	expiration := uint32(event.timestamp/1e9) + MTG_WORK_EXPIRATION_SECONDS
 	//handle expired work
@@ -255,14 +257,14 @@ func (c *Contract) SendAction(fromAccount chain.Name, action *chain.Action) {
 }
 
 func (c *Contract) GetAccount(userId chain.Uint128) (chain.Name, bool) {
-	dbAccounts := NewMixinAccountDB(c.self, c.self)
-	idxDB := dbAccounts.GetIdxDBByClientId()
-	it2 := idxDB.Find(userId)
+	dbAccounts := NewMixinAccountTable(c.self, c.self)
+	idxTable := dbAccounts.GetIdxTableByclient_id()
+	it2 := idxTable.Find(userId)
 	if !it2.IsOk() {
 		return chain.Name{}, false
 	}
 
-	it, record := dbAccounts.Get(it2.Primary)
+	it, record := dbAccounts.GetByKey(it2.Primary)
 	if !it.IsOk() {
 		return chain.Name{}, false
 	}
@@ -272,9 +274,9 @@ func (c *Contract) GetAccount(userId chain.Uint128) (chain.Name, bool) {
 
 func (c *Contract) CreateNewAccount(from chain.Uint128) chain.Name {
 	var fromAccount chain.Name
-	dbAccounts := NewMixinAccountDB(c.self, c.self)
-	idxDB := dbAccounts.GetIdxDBByClientId()
-	it2 := idxDB.Find(from)
+	dbAccounts := NewMixinAccountTable(c.self, c.self)
+	idxTable := dbAccounts.GetIdxTableByclient_id()
+	it2 := idxTable.Find(from)
 	assert(it2.IsOk(), "account already exists!")
 	//		accountId := c.GetNextAccountId()
 	fromAccount = c.GetNextAvailableAccount()
@@ -286,7 +288,7 @@ func (c *Contract) CreateNewAccount(from chain.Uint128) chain.Name {
 func (c *Contract) IssueAsset(fromAccount chain.Name, quantity *chain.Asset, timestamp uint64) bool {
 	symbol := quantity.Symbol
 	sym_code := symbol.Code()
-	db := NewCurrencyStatsDB(MIXIN_WTOKENS, chain.Name{sym_code})
+	db := NewCurrencyStatsTable(MIXIN_WTOKENS, chain.Name{sym_code})
 	itr := db.Find(sym_code)
 	if !itr.IsOk() {
 		maxSupply := chain.NewAsset(MAX_SUPPLY, symbol)
@@ -344,7 +346,7 @@ func (c *Contract) TransferOut(member *chain.Uint128, amount chain.Asset, memo s
 		asset:     assetId,
 		members:   []chain.Uint128{*member},
 		threshold: 1,
-		amount:    *_amount,
+		amount:    _amount,
 		extra:     []byte(memo),
 	}
 
@@ -399,8 +401,8 @@ func (c *Contract) HandleRefund(clientId chain.Uint128, assetId chain.Uint128, a
 }
 
 func (c *Contract) GetNextIndex(key uint64, initialValue uint64) uint64 {
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		item.count += 1
 		db.Update(it, item, chain.Name{N: 0})
 		return item.count
@@ -414,8 +416,8 @@ func (c *Contract) GetNextIndex(key uint64, initialValue uint64) uint64 {
 func (c *Contract) IncNonce() {
 	//	assert(!c.nonceIncreased, "nonce already increased")
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		item.count += 1
 		db.Update(it, item, chain.SamePayer)
 	} else {
@@ -428,8 +430,8 @@ func (c *Contract) IncNonce() {
 
 func (c *Contract) GetNonce() uint64 {
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		return item.count
 	} else {
 		//nonce starts from 1, event with nonce 0 is for addprocess which sends to mtg.xin contract
@@ -441,8 +443,8 @@ func (c *Contract) GetNonce() uint64 {
 
 func (c *Contract) CheckAndIncNonce(oldNonce uint64) {
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		chain.Println("++++CheckAndIncNonce:", item.count, oldNonce)
 		check(item.count == oldNonce, "Invalid nonce")
 		item.count = oldNonce + 1
@@ -462,7 +464,7 @@ func (c *Contract) GetNextAccountId() uint64 {
 }
 
 func (c *Contract) GetNextAvailableAccount() chain.Name {
-	db := NewAccountCacheDB(c.self, c.self)
+	db := NewAccountCacheTable(c.self, c.self)
 	item := db.Get()
 	check(item != nil, "No availabe account")
 
@@ -478,11 +480,11 @@ func (c *Contract) GetNextAvailableAccount() chain.Name {
 }
 
 func (c *Contract) GetSymbol(assetId chain.Uint128) chain.Symbol {
-	assetDB := NewMixinAssetDB(c.self, c.self)
-	idxDB := assetDB.GetIdxDBByAssetId()
-	itAssetId := idxDB.Find(assetId)
+	assetTable := NewMixinAssetTable(c.self, c.self)
+	idxTable := assetTable.GetIdxTableByasset_id()
+	itAssetId := idxTable.Find(assetId)
 	assert(itAssetId.IsOk(), "asset id not found")
-	it, asset := assetDB.Get(itAssetId.Primary)
+	it, asset := assetTable.GetByKey(itAssetId.Primary)
 	assert(it.IsOk(), "asset not found")
 	return asset.symbol
 }
@@ -497,7 +499,7 @@ func (c *Contract) ShowError(err string) {
 }
 
 func (c *Contract) GetCreateAccountFee() *chain.Asset {
-	db := NewCreateAccountFeeDB(c.self, c.self)
+	db := NewCreateAccountFeeTable(c.self, c.self)
 	accountFee := db.Get()
 	if accountFee == nil {
 		return chain.NewAsset(0, chain.NewSymbol("MEOS", 8))

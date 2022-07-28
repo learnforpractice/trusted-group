@@ -5,7 +5,7 @@ import "github.com/uuosio/chain"
 //action initialize
 func (c *Contract) Initialize() {
 	chain.RequireAuth(c.self)
-	db := NewAccountCacheDB(c.self, c.self)
+	db := NewAccountCacheTable(c.self, c.self)
 	item := db.Get()
 	check(item == nil, "Account cache already initialized")
 
@@ -20,7 +20,7 @@ func (c *Contract) Initialize() {
 //action addasset
 func (c *Contract) AddMixinAsset(asset_id chain.Uint128, symbol chain.Symbol) {
 	chain.RequireAuth(c.self)
-	db := NewMixinAssetDB(c.self, c.self)
+	db := NewMixinAssetTable(c.self, c.self)
 	it := db.Find(symbol.Code())
 	check(!it.IsOk(), "Asset already exists")
 	db.Store(&MixinAsset{symbol, asset_id}, c.self)
@@ -29,7 +29,7 @@ func (c *Contract) AddMixinAsset(asset_id chain.Uint128, symbol chain.Symbol) {
 //action removeasset
 func (c *Contract) RemoveMixinAsset(symbol chain.Symbol) {
 	chain.RequireAuth(c.self)
-	db := NewMixinAssetDB(c.self, c.self)
+	db := NewMixinAssetTable(c.self, c.self)
 	it := db.Find(symbol.Code())
 	check(it.IsOk(), "Asset does not exists")
 	db.Remove(it)
@@ -73,7 +73,7 @@ func (c *Contract) OnErrorEvent(event *TxEvent, reason *string) {
 
 	c.StoreNonce(event.nonce)
 
-	db := NewErrorTxEventDB(c.self, c.self)
+	db := NewErrorTxEventTable(c.self, c.self)
 	it := db.Find(event.nonce)
 	assert(!it.IsOk(), "event already exists!")
 	db.Store(errorEvent, c.self)
@@ -82,8 +82,8 @@ func (c *Contract) OnErrorEvent(event *TxEvent, reason *string) {
 //action exec
 func (c *Contract) Exec(executor chain.Name) {
 	chain.RequireAuth(executor)
-	//	db := NewTxEventDB(c.self, c.self)
-	db := NewErrorTxEventDB(c.self, c.self)
+	//	db := NewTxEventTable(c.self, c.self)
+	db := NewErrorTxEventTable(c.self, c.self)
 	it := db.Lowerbound(uint64(0))
 	assert(it.IsOk(), "error event not found!")
 	errorEvent := db.GetByIterator(it)
@@ -101,12 +101,12 @@ func (c *Contract) SetTransferFee(fee *chain.Asset) {
 	chain.RequireAuth(c.self)
 	assert(fee.Amount > 0, "fee must be greater than 0")
 	{
-		db := NewMixinAssetDB(c.self, c.self)
+		db := NewMixinAssetTable(c.self, c.self)
 		it := db.Find(fee.Symbol.Code())
 		assert(it.IsOk(), "asset not found!")
 	}
-	db := NewTransferFeeDB(c.self, c.self)
-	it, transfeFee := db.Get(fee.Symbol.Code())
+	db := NewTransferFeeTable(c.self, c.self)
+	it, transfeFee := db.GetByKey(fee.Symbol.Code())
 	if it.IsOk() {
 		transfeFee.fee = *fee
 		db.Update(it, transfeFee, chain.SamePayer)
@@ -119,7 +119,7 @@ func (c *Contract) SetTransferFee(fee *chain.Asset) {
 func (c *Contract) SetCreateAccountFee(fee *chain.Asset) {
 	chain.RequireAuth(c.self)
 	assert(fee.Amount > 0, "fee must be greater than 0")
-	db := NewCreateAccountFeeDB(c.self, c.self)
+	db := NewCreateAccountFeeTable(c.self, c.self)
 	db.Set(&CreateAccountFee{*fee}, c.self)
 }
 
@@ -147,8 +147,8 @@ func (c *Contract) OnTransfer(from chain.Name, to chain.Name, quantity chain.Ass
 		return
 	}
 
-	db := NewMixinAccountDB(c.self, c.self)
-	it, record := db.Get(to.N)
+	db := NewMixinAccountTable(c.self, c.self)
+	it, record := db.GetByKey(to.N)
 	//to account is not a mixinaccount, no tx request
 	if !it.IsOk() {
 		return
@@ -156,8 +156,8 @@ func (c *Contract) OnTransfer(from chain.Name, to chain.Name, quantity chain.Ass
 
 	amount := chain.NewUint128(uint64(quantity.Amount), 0)
 
-	assetDB := NewMixinAssetDB(c.self, c.self)
-	it, asset := assetDB.Get(quantity.Symbol.Code())
+	assetTable := NewMixinAssetTable(c.self, c.self)
+	it, asset := assetTable.GetByKey(quantity.Symbol.Code())
 	check(it.IsOk(), "invalid mixin asset")
 	assetId := asset.asset_id
 	id := c.GetNextTxRequestNonce()
@@ -168,7 +168,7 @@ func (c *Contract) OnTransfer(from chain.Name, to chain.Name, quantity chain.Ass
 		asset:     assetId,
 		members:   []chain.Uint128{record.client_id},
 		threshold: 1,
-		amount:    *amount,
+		amount:    amount,
 		extra:     []byte(memo),
 	}
 	chain.NewAction(

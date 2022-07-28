@@ -41,13 +41,13 @@ type AccountCache struct {
 //table bindaccounts
 type MixinAccount struct {
 	eos_account chain.Name    //primary : t.eos_account.N
-	client_id   chain.Uint128 //IDX128: ByClientId : t.client_id : t.client_id
+	client_id   chain.Uint128 //secondary
 }
 
 //table mixinassets
 type MixinAsset struct {
 	symbol   chain.Symbol  //primary : t.symbol.Code()
-	asset_id chain.Uint128 //IDX128: ByAssetId : t.asset_id : t.asset_id
+	asset_id chain.Uint128 //secondary
 }
 
 //table transferfees

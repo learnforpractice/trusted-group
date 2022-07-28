@@ -13,7 +13,7 @@ const (
 	KEY_COUNTER_TEST = 7
 )
 
-func ClearDB(db database.MultiIndexInterface) {
+func ClearTable(db database.MultiIndexInterface) {
 	for {
 		it := db.Lowerbound(0)
 		if !it.IsOk() {
@@ -23,7 +23,7 @@ func ClearDB(db database.MultiIndexInterface) {
 	}
 }
 
-func ClearSingletonDB(db *database.SingletonDB) {
+func ClearSingletonTable(db *database.SingletonTable) {
 	db.Remove()
 }
 
@@ -65,15 +65,15 @@ func (c *Contract) UpdateAuth(account chain.Name) {
 //action clear
 func (c *Contract) clear() {
 	chain.RequireAuth(c.self)
-	ClearSingletonDB(NewAccountCacheDB(c.self, c.self).db)
-	ClearDB(NewMixinAccountDB(c.self, c.self).MultiIndexInterface)
+	ClearSingletonTable(NewAccountCacheTable(c.self, c.self).db)
+	ClearTable(NewMixinAccountTable(c.self, c.self).MultiIndexInterface)
 	// return
-	ClearDB(NewCounterDB(c.self, c.self).MultiIndexInterface)
+	ClearTable(NewCounterTable(c.self, c.self).MultiIndexInterface)
 
-	// ClearDB(NewMixinAssetDB(c.self, c.self).MultiIndexInterface)
+	// ClearTable(NewMixinAssetTable(c.self, c.self).MultiIndexInterface)
 
-	ClearDB(NewTxEventDB(c.self, c.self).MultiIndexInterface)
-	// ClearDB(NewMTGWorkDB(c.self, c.self).MultiIndexInterface)
+	ClearTable(NewTxEventTable(c.self, c.self).MultiIndexInterface)
+	// ClearTable(NewMTGWorkTable(c.self, c.self).MultiIndexInterface)
 }
 
 //action test
