@@ -42,10 +42,22 @@ jobs:
       - name: Run eos-debugger
         run: |
           PYTHON_SHARED_LIB_PATH=${{ env.pythonLocation }}/lib/libpython3.9.so eos-debugger &
+      - name: Build contracts
+        working-directory: mvm/eos/contracts
+        run: |
+          pushd mtg.xin
+          ./build.sh
+          popd
+          pushd dappdemo
+          ./build.sh
+          popd
+          pushd mixinproxy
+           ./build.sh
+          popd
+
       - name: Run tests
         working-directory: mvm/eos/contracts/mixinproxy
         run: |
-          ./build.sh
           go test -v
 
 
