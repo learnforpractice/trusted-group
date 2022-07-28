@@ -1,2 +1,1 @@
-
-eosio-go build -tags debug -o mtg.xin.wasm .
+go-contract build -tags debug -o mtg.xin.wasm .

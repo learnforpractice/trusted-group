@@ -1,2 +1,2 @@
 
-eosio-go build -o mtg.xin.wasm .
+go-contract build -o mtg.xin.wasm .

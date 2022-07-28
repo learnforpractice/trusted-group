@@ -51,7 +51,7 @@ func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
 
 //action setup
 func (c *Contract) Setup(signers []Signer) {
-	db := NewSignerDB(c.self, c.self)
+	db := NewSignerTable(c.self, c.self)
 	for {
 		it := db.Lowerbound(0)
 		if !it.IsOk() {
@@ -75,7 +75,7 @@ func (c *Contract) AddProcess(contract chain.Name, process chain.Uint128, signat
 	data := enc.GetBytes()
 	VerifySignatures(c.self, data, signatures)
 
-	db := NewProcessDB(c.self, c.self)
+	db := NewProcessTable(c.self, c.self)
 	it := db.Find(contract.N)
 	check(!it.IsOk(), "process already exists!")
 	item := &Process{
@@ -96,8 +96,8 @@ func (c *Contract) TxRequest(nonce uint64,
 	extra []byte) {
 
 	chain.RequireAuth(contract)
-	db := NewProcessDB(c.self, c.self)
-	it, item := db.Get(contract.N)
+	db := NewProcessTable(c.self, c.self)
+	it, item := db.GetByKey(contract.N)
 	check(it.IsOk(), "process not found!")
 	check(item.process == process, "invalid process!")
 
@@ -116,7 +116,7 @@ func (c *Contract) TxRequest(nonce uint64,
 	}
 
 	chain.NewAction(
-		chain.PermissionLevel{c.self, chain.ActiveName},
+		&chain.PermissionLevel{c.self, chain.ActiveName},
 		c.self,
 		chain.NewName("ontxlog"),
 		&log,
@@ -130,8 +130,8 @@ func (c *Contract) OnTxLog(log *TxLog) {
 }
 
 func (c *Contract) GetNextIndex(key uint64) uint64 {
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		index := item.count
 		item.count += 1
 		db.Update(it, item, chain.SamePayer)
