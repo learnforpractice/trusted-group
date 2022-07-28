@@ -20,7 +20,7 @@ type Signer struct {
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerDB := NewSignerDB(MTG_XIN, MTG_XIN)
+	signerDB := NewSignerTable(MTG_XIN, MTG_XIN)
 	signers := make([]*Signer, 0, 10)
 	it := signerDB.Lowerbound(0)
 	for it.IsOk() {
@@ -69,8 +69,8 @@ type Process struct {
 }
 
 func VerifyProcess(contract chain.Name, process chain.Uint128) {
-	db := NewProcessDB(MTG_XIN, MTG_XIN)
-	it, record := db.Get(contract.N)
+	db := NewProcessTable(MTG_XIN, MTG_XIN)
+	it, record := db.GetByKey(contract.N)
 	assert(it.IsOk(), "process not found!")
 	assert(record.process == process, "invalid process!")
 }

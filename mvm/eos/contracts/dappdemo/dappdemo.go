@@ -51,10 +51,15 @@ type Contract struct {
 	self          chain.Name
 	firstReceiver chain.Name
 	action        chain.Name
+	process       chain.Uint128
 }
 
 func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
-	c := &Contract{receiver, firstReceiver, action}
+	db := NewProcessTable(MTG_XIN, MTG_XIN)
+	it, record := db.GetByKey(receiver.N)
+	check(it.IsOk(), "process not found!")
+
+	c := &Contract{self: receiver, firstReceiver: firstReceiver, action: action, process: record.process}
 	return c
 }
 
@@ -75,7 +80,7 @@ func (c *Contract) OnEvent(event *TxEvent) {
 	assert(event.nonce >= nonce, "bad nonce!")
 
 	payer := c.self
-	db := NewTxEventDB(c.self, c.self)
+	db := NewTxEventTable(c.self, c.self)
 	it := db.Find(event.nonce)
 	assert(!it.IsOk(), "event already exists!")
 	db.Store(event, payer)
@@ -86,8 +91,8 @@ func (c *Contract) Exec(executor chain.Name) {
 	chain.RequireAuth(executor)
 
 	nonce := c.GetNonce()
-	db := NewTxEventDB(c.self, c.self)
-	it, event := db.Get(nonce)
+	db := NewTxEventTable(c.self, c.self)
+	it, event := db.GetByKey(nonce)
 	assert(it.IsOk(), "event not found!")
 	db.Remove(it)
 
@@ -105,14 +110,15 @@ func (c *Contract) Exec(executor chain.Name) {
 			extra:     event.extra,
 		}
 
-		check(event.amount.Cmp(chain.NewUint128(chain.MAX_AMOUNT, 0)) < 0, "Invalid amount")
+		max := chain.NewUint128(chain.MAX_AMOUNT, 0)
+		check(event.amount.Cmp(&max) < 0, "Invalid amount")
 
 		amount := event.amount.Uint64() / uint64(txRequestCount)
 		chain.Println("+++++++set amount:", amount)
 		notify.amount.SetUint64(amount)
 
 		chain.NewAction(
-			chain.PermissionLevel{c.self, chain.ActiveName},
+			&chain.PermissionLevel{c.self, chain.ActiveName},
 			MTG_XIN,
 			chain.NewName("txrequest"),
 			&notify,
@@ -122,8 +128,8 @@ func (c *Contract) Exec(executor chain.Name) {
 }
 
 func (c *Contract) GetNextIndex(key uint64, initialValue uint64) uint64 {
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		item.count += 1
 		db.Update(it, item, chain.Name{N: 0})
 		return item.count
@@ -136,8 +142,8 @@ func (c *Contract) GetNextIndex(key uint64, initialValue uint64) uint64 {
 
 func (c *Contract) IncNonce() {
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		item.count += 1
 		db.Update(it, item, chain.SamePayer)
 	} else {
@@ -149,8 +155,8 @@ func (c *Contract) IncNonce() {
 
 func (c *Contract) GetNonce() uint64 {
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		return item.count
 	} else {
 		//nonce starts from 1, event with nonce 0 is for addprocess which sends to mtg.xin contract
@@ -162,8 +168,8 @@ func (c *Contract) GetNonce() uint64 {
 
 func (c *Contract) CheckAndIncNonce(oldNonce uint64) {
 	key := uint64(KEY_NONCE)
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		chain.Println("++++CheckAndIncNonce:", item.count, oldNonce)
 		check(item.count == oldNonce, "Invalid nonce")
 		item.count = oldNonce + 1

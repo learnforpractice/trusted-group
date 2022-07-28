@@ -1,2 +1,1 @@
-
-eosio-go build -o dappdemo.wasm .
+go-contract build -o dappdemo.wasm .
