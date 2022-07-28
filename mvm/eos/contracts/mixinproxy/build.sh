@@ -1,2 +1,1 @@
-
-eosio-go build -o mixinproxy.wasm .
+go-contract  build -o mixinproxy.wasm .
