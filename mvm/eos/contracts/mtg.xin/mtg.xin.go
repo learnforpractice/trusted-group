@@ -8,13 +8,13 @@ const (
 	KEY_TX_REQUEST_SEQ = 1
 )
 
-//table processes
+// table processes
 type Process struct {
 	contract chain.Name //primary : t.contract.N
 	process  chain.Uint128
 }
 
-//table logs
+// table logs
 type TxLog struct {
 	id        uint64 //primary : t.id
 	nonce     uint64
@@ -28,19 +28,19 @@ type TxLog struct {
 	timestamp uint64
 }
 
-//table signers
+// table signers
 type Signer struct {
 	account    chain.Name //primary : t.account.N
 	public_key chain.PublicKey
 }
 
-//table counters
+// table counters
 type Counter struct {
 	id    uint64 //primary : t.id
 	count uint64
 }
 
-//contract mtg.xin
+// contract mtg.xin
 type Contract struct {
 	self, firstReceiver, action chain.Name
 }
@@ -49,9 +49,9 @@ func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
 	return &Contract{receiver, firstReceiver, action}
 }
 
-//action setup
+// action setup
 func (c *Contract) Setup(signers []Signer) {
-	db := NewSignerDB(c.self, c.self)
+	db := NewSignerTable(c.self, c.self)
 	for {
 		it := db.Lowerbound(0)
 		if !it.IsOk() {
@@ -65,7 +65,7 @@ func (c *Contract) Setup(signers []Signer) {
 	}
 }
 
-//action addprocess
+// action addprocess
 func (c *Contract) AddProcess(contract chain.Name, process chain.Uint128, signatures []chain.Signature) {
 	check(chain.IsAccount(contract), "contract account does not exists!")
 
@@ -75,7 +75,7 @@ func (c *Contract) AddProcess(contract chain.Name, process chain.Uint128, signat
 	data := enc.GetBytes()
 	VerifySignatures(c.self, data, signatures)
 
-	db := NewProcessDB(c.self, c.self)
+	db := NewProcessTable(c.self, c.self)
 	it := db.Find(contract.N)
 	check(!it.IsOk(), "process already exists!")
 	item := &Process{
@@ -85,7 +85,7 @@ func (c *Contract) AddProcess(contract chain.Name, process chain.Uint128, signat
 	db.Store(item, c.self)
 }
 
-//action txrequest
+// action txrequest
 func (c *Contract) TxRequest(nonce uint64,
 	contract chain.Name,
 	process chain.Uint128,
@@ -96,8 +96,8 @@ func (c *Contract) TxRequest(nonce uint64,
 	extra []byte) {
 
 	chain.RequireAuth(contract)
-	db := NewProcessDB(c.self, c.self)
-	it, item := db.Get(contract.N)
+	db := NewProcessTable(c.self, c.self)
+	it, item := db.GetByKey(contract.N)
 	check(it.IsOk(), "process not found!")
 	check(item.process == process, "invalid process!")
 
@@ -124,14 +124,14 @@ func (c *Contract) TxRequest(nonce uint64,
 	//TODO: emit transfer event so block explorer can show it
 }
 
-//action ontxlog ignore
+// action ontxlog
 func (c *Contract) OnTxLog(log *TxLog) {
 	chain.RequireAuth(c.self)
 }
 
 func (c *Contract) GetNextIndex(key uint64) uint64 {
-	db := NewCounterDB(c.self, c.self)
-	if it, item := db.Get(key); it.IsOk() {
+	db := NewCounterTable(c.self, c.self)
+	if it, item := db.GetByKey(key); it.IsOk() {
 		index := item.count
 		item.count += 1
 		db.Update(it, item, chain.SamePayer)

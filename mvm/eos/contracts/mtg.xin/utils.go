@@ -6,7 +6,7 @@ import (
 
 func VerifySignatures(codeAccount chain.Name, data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerDB := NewSignerDB(codeAccount, codeAccount)
+	signerDB := NewSignerTable(codeAccount, codeAccount)
 	signers := make([]*Signer, 0, 10)
 	it := signerDB.Lowerbound(0)
 	for it.IsOk() {

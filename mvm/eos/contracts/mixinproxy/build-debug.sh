@@ -1,2 +1,2 @@
 
-eosio-go build -tags debug -o mixinproxy.wasm .
+go-contract build -tags debug -o mixinproxy.wasm .

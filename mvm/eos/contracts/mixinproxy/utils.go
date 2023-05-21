@@ -9,7 +9,7 @@ const (
 	alphabet = "abcdefghijklmnopqrstuvwxyz12345"
 )
 
-//table signers ignore
+// table signers ignore
 type Signer struct {
 	account    chain.Name //primary : t.account.N
 	public_key chain.PublicKey
@@ -17,7 +17,7 @@ type Signer struct {
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerDB := NewSignerDB(MTG_XIN, MTG_XIN)
+	signerDB := NewSignerTable(MTG_XIN, MTG_XIN)
 	signers := make([]*Signer, 0, 10)
 	it := signerDB.Lowerbound(0)
 	for it.IsOk() {

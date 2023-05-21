@@ -12,7 +12,7 @@ func assert(b bool, msg string) {
 	chain.Assert(b, msg)
 }
 
-//table signers
+// table signers
 type Signer struct {
 	account    chain.Name //primary : t.account.N
 	public_key chain.PublicKey
@@ -20,13 +20,13 @@ type Signer struct {
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerDB := NewSignerDB(MTG_XIN, MTG_XIN)
+	signerTable := NewSignerTable(MTG_XIN, MTG_XIN)
 	signers := make([]*Signer, 0, 10)
-	it := signerDB.Lowerbound(0)
+	it := signerTable.Lowerbound(0)
 	for it.IsOk() {
-		item := signerDB.GetByIterator(it)
+		item := signerTable.GetByIterator(it)
 		signers = append(signers, item)
-		it, _ = signerDB.Next(it)
+		it, _ = signerTable.Next(it)
 	}
 
 	threshold := len(signers)/3*2 + 1
@@ -62,22 +62,22 @@ func CheckDuplicatedSignature(signatures []*chain.Signature, signature *chain.Si
 	}
 }
 
-//table processes ignore
+// table processes ignore
 type Process struct {
 	contract chain.Name //primary : t.contract.N
 	process  chain.Uint128
 }
 
 func GetProcessId(contract chain.Name) chain.Uint128 {
-	db := NewProcessDB(MTG_XIN, MTG_XIN)
-	it, record := db.Get(contract.N)
+	db := NewProcessTable(MTG_XIN, MTG_XIN)
+	it, record := db.GetByKey(contract.N)
 	assert(it.IsOk(), "process not found!")
 	return record.process
 }
 
 func VerifyProcess(contract chain.Name, process chain.Uint128) {
-	db := NewProcessDB(MTG_XIN, MTG_XIN)
-	it, record := db.Get(contract.N)
+	db := NewProcessTable(MTG_XIN, MTG_XIN)
+	it, record := db.GetByKey(contract.N)
 	assert(it.IsOk(), "process not found!")
 	assert(record.process == process, "invalid process!")
 }
