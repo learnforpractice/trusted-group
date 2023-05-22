@@ -14,7 +14,7 @@ sys.path.append(os.path.join(test_dir, '..'))
 from ipyeos import log
 from ipyeos.chaintester import ChainTester
 
-from pyeoskit import eosapi
+from ipyeos import eos
 
 logger = log.get_logger(__name__)
 
@@ -79,7 +79,7 @@ class Test(object):
     def init(cls):
         cls.test_keys = []
         for i in range(4):
-            key = eosapi.create_key()
+            key = eos.create_key()
             cls.test_keys.append(key)
 
         cls.chain = ChainTester()
@@ -181,7 +181,7 @@ class Test(object):
         signatures = []
         for key in cls.test_keys:
             priv = key['private']
-            signature = eosapi.sign_digest(digest, priv)
+            signature = eos.sign_digest(digest, priv)
             signatures.append(signature)
         args['signatures'] = signatures
 
@@ -273,7 +273,7 @@ class Test(object):
         signatures = []
         for key in self.test_keys:
             priv = key['private']
-            signature = eosapi.sign_digest(digest, priv)
+            signature = eos.sign_digest(digest, priv)
             signatures.append(signature)
         tx_event['event']['signatures'] = signatures
 
