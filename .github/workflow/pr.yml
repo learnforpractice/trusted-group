@@ -1,0 +1,44 @@
+name: PR
+on:
+  pull_request:
+  push:
+    branches: [ eos ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        python-version: [3.9]
+    name: run tests in tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          python3 -m pip install -U pip setuptools
+          python3 -m pip install wheel
+          python3 -m pip install ipyeos
+          python3 -m pip install gscdk
+      - name: Run eos-debugger
+        run: |
+          PYTHON_SHARED_LIB_PATH=${{ env.pythonLocation }}/lib/libpython3.9.so eosdebugger &
+      - name: Build contracts
+        working-directory: mvm/eos/contracts
+        run: |
+          ./build.sh
+      - name: Test contracts
+        working-directory: mvm/eos/contracts
+        run: |
+          ./test.sh
