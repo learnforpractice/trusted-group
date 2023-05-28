@@ -434,6 +434,15 @@ func (e *Engine) FetchActions(blockNum uint64) ([]chain.JsonObject, error) {
 			return nil, fmt.Errorf("bad tx object")
 		}
 
+		status, err := tx.GetString("status")
+		if err != nil {
+			return nil, err
+		}
+
+		if status != "executed" {
+			continue
+		}
+
 		acts, err := tx.GetArray("actions")
 		if err != nil {
 			return nil, err
