@@ -2,6 +2,8 @@
 import os
 import sys
 import time
+from typing import List, Optional, Dict
+
 try:
 	from pyeoskit import eosapi, wallet
 except:
@@ -28,6 +30,11 @@ wallet.import_key('test', '5J2VCfZgiB6g86NfBmJE73yGRpvZXqS2UR7ZDGjt8XU2LPRddiY')
 wallet.import_key('test', '5J3hATRW5G6GT3pkSuyxrPw9KTU4hmbwX9WKddUSLwMcwQSLYex')
 wallet.import_key('test', '5K2Up4bcBo6BgDpfgccNmpgRE33nrvKsxfMgAauTMzHAqyN8SxM')
 
+# EOS7rVXEPKJsYbjW3KZpaLBnpTx7U3XTdKedEWfPpj2mF9jTdcsG5
+# EOS8JEHuDKeLgKfhCQT1rwHSdB1fuDd2ngZDequcvWbF9a92VKubc
+# EOS6Bi6Ndo1PxiEuvt1osP267xyjo8HEbLgVzBrX7Ewruf7dbUiRp
+# EOS8N2voiByjmCZeTwQpjHjvwpg8Gnbv3wFTqgcg7GdKk1UvYekzX
+
 #helloworld12
 #'5JHRxntHapUryUetZgWdd3cg6BrpZLMJdqhhXnMaZiiT4qdJPhv',#EOS89jesRgvvnFVuNtLg4rkFXcBg2Qq26wjzppssdHj2a8PSoWMhx
 wallet.import_key('test', '5JHRxntHapUryUetZgWdd3cg6BrpZLMJdqhhXnMaZiiT4qdJPhv')
@@ -43,7 +50,18 @@ active_key = 'EOS7sPDxfw5yx5SZgQcVb57zS1XeSWLNpQKhaGjjy2qe61BrAQ49o'
 try:
     eosapi.create_account(main_account, 'mtgxinmtgxin', owner_key, active_key, 1024*1024, 1.0, 10000.0)
 except Exception as e:
-    logger.error(e)
+    logger.exception(e)
+
+try:
+    eosapi.create_account(main_account, 'mixincrossss', owner_key, active_key, 1024*1024, 1.0, 10000.0)
+except Exception as e:
+    logger.exception(e)
+
+eosapi.create_account(main_account, 'mixinwtokens', owner_key, active_key, 1024*1024, 1.0, 10000.0)
+eosapi.create_account(main_account, 'mixinmanager', owner_key, active_key, 1024*1024, 1.0, 10000.0)
+
+eosapi.create_account(main_account, 'mtgpublisher', owner_key, active_key, 1024*1024, 1.0, 10000.0)
+eosapi.create_account(main_account, 'mtgexecutor1', owner_key, active_key, 1024*1024, 1.0, 10000.0)
 
 pub_key = 'EOS7sPDxfw5yx5SZgQcVb57zS1XeSWLNpQKhaGjjy2qe61BrAQ49o'
 # pub_key = 'EOS6AjF6hvF7GSuSd4sCgfPKq5uWaXvGM2aQtEUCwmEHygQaqxBSV'
@@ -65,34 +83,47 @@ def deploy_contract(account, path):
         if not e.json['error']['details'][0]['message'] == 'contract is already running this version of code':
             raise e
 
-def update_auth(account, pub_keys, threshold):
+def update_auth(account, parent='owner', permission='active', pub_keys: Optional[List] = None, auth_accounts: Optional[Dict] = None, threshold = 1):
+    if not pub_keys and not auth_accounts:
+        raise Exception("pub_keys and auth_accounts are empty")
+
+    if not pub_keys:
+        pub_keys = []
+
+    if not auth_accounts:
+        auth_accounts = {}
+
     keys = []
     pub_keys.sort()
     for pub_key in pub_keys:
         keys.append({'key': pub_key, 'weight': 1})
     logger.info(keys)
 
+    account_permissions = []
+    for a in sorted(auth_accounts.keys()):
+        perm = {
+            "permission":
+            {
+                "actor": a,
+                "permission": auth_accounts[a],
+            },
+            "weight":1
+        }
+        account_permissions.append(perm)
+
     args = {
         "account": account,
-        "permission": "active",
-        "parent": "owner",
+        "permission": permission,
+        "parent": parent,
         "auth": {
             "threshold": threshold,
             "keys": keys,
-            "accounts": [
-                {
-                    "permission":
-                    {
-                        "actor":account,
-                        "permission": "eosio.code"
-                    },
-                    "weight":threshold
-                }
-            ],
+            "accounts": account_permissions,
             "waits": []
         }
     }
-    r = eosapi.push_action('eosio', 'updateauth', args, {account:'active'})
+    logger.info("++++%s", {account: permission})
+    r = eosapi.push_action('eosio', 'updateauth', args, {account: permission})
 
 pub_keys = [
    "EOS7rVXEPKJsYbjW3KZpaLBnpTx7U3XTdKedEWfPpj2mF9jTdcsG5",
@@ -101,8 +132,22 @@ pub_keys = [
    "EOS8N2voiByjmCZeTwQpjHjvwpg8Gnbv3wFTqgcg7GdKk1UvYekzX"
 ]
 
-update_auth('mtgxinmtgxin', pub_keys, 3)
 deploy_contract('mtgxinmtgxin', './mtg.xin/mtg.xin')
 
-update_auth('helloworld11', [pub_key], 1)
-deploy_contract('helloworld11', './dappdemo/dappdemo')
+deploy_contract('mixinwtokens', './mixinproxy/token/token')
+deploy_contract('mixincrossss', './mixinproxy/mixinproxy')
+
+update_auth('mixinmanager', pub_keys=pub_keys, threshold=3)
+update_auth('mixinmanager', parent='', permission='owner', pub_keys=pub_keys, threshold=3)
+
+# 'mtgxinmtgxin', 'mixincrossss', 'mixinwtokens' 这三个账号的 owner key 都由 mixinmanager 管理
+# 'mtgxinmtgxin', 'mixincrossss' 这两个账号的active key都由 mixinmanager 管理
+# 'mixinwtokens' 的 active 权限设置成 mixinmanager active
+
+update_auth('mtgxinmtgxin', auth_accounts={'mixinmanager':'active', 'mtgxinmtgxin':'eosio.code'}, threshold=1)
+update_auth('mixincrossss', auth_accounts={'mixinmanager':'active', 'mixincrossss':'eosio.code'}, threshold=1)
+update_auth('mixinwtokens', auth_accounts={'mixincrossss':'eosio.code', 'mixinwtokens':'eosio.code'}, threshold=1)
+
+update_auth('mtgxinmtgxin', parent='', permission='owner', auth_accounts={'mixinmanager':'active'}, threshold=1)
+update_auth('mixincrossss', parent='', permission='owner', auth_accounts={'mixinmanager':'active'}, threshold=1)
+update_auth('mixinwtokens', parent='', permission='owner', auth_accounts={'mixinmanager':'active'}, threshold=1)

@@ -153,15 +153,12 @@ class Test(object):
                 'mtgsigner114',
         ]
         _signers = []
+        public_keys = []
         for i in range(len(signers)):
-            signer = {
-                'account': signers[i],
-                'public_key': cls.test_keys[i]['public'],
-            }
-            _signers.append(signer)
+            public_keys.append(cls.test_keys[i]['public'])
 
         args = dict(
-            signers = _signers
+            signers = public_keys
         )
         r = cls.chain.push_action(MTG_XIN_CONTRACT, 'setup', args, {MTG_XIN_CONTRACT: 'active'})
         print_console(r)

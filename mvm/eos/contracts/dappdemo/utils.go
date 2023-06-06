@@ -12,27 +12,21 @@ func assert(b bool, msg string) {
 	chain.Assert(b, msg)
 }
 
-// table signers
-type Signer struct {
-	account    chain.Name //primary : t.account.N
-	public_key chain.PublicKey
+// table signers singleton
+type Signers struct {
+	public_keys []chain.PublicKey
 }
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerTable := NewSignerTable(MTG_XIN, MTG_XIN)
-	signers := make([]*Signer, 0, 10)
-	it := signerTable.Lowerbound(0)
-	for it.IsOk() {
-		item := signerTable.GetByIterator(it)
-		signers = append(signers, item)
-		it, _ = signerTable.Next(it)
-	}
+	signerTable := NewSignersTable(MTG_XIN, MTG_XIN)
+	signers := signerTable.Get()
+	assert(signers != nil, "no signers")
 
-	threshold := len(signers)/3*2 + 1
+	threshold := len(signers.public_keys)/3*2 + 1
 	validSignatures := 0
 
-	verfiedSignatures := make([]*chain.Signature, 0, len(signers))
+	verfiedSignatures := make([]*chain.Signature, 0, len(signers.public_keys))
 
 	for i := 0; i < len(signatures); i++ {
 		signature := signatures[i]
@@ -40,8 +34,8 @@ func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 		verfiedSignatures = append(verfiedSignatures, &signature)
 
 		pub_key := chain.RecoverKey(digest, &signature)
-		for _, signer := range signers {
-			if signer.public_key == *pub_key {
+		for _, public_key := range signers.public_keys {
+			if public_key == *pub_key {
 				validSignatures += 1
 				break
 			}

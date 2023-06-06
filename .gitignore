@@ -2,6 +2,8 @@ __pycache__
 *.abi
 *.wasm
 generated.go
+*.yaml
+*.toml
 multisig
 multisig.1
 multisig.2
@@ -19,3 +21,5 @@ config.toml
 local.sh
 deploy.sh
 /mvm/mvm
+.eos-testnet
+

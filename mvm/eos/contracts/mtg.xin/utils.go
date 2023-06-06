@@ -5,29 +5,24 @@ import (
 )
 
 func VerifySignatures(codeAccount chain.Name, data []byte, signatures []chain.Signature) bool {
-	digest := chain.Sha256(data)
-	signerDB := NewSignerTable(codeAccount, codeAccount)
-	signers := make([]*Signer, 0, 10)
-	it := signerDB.Lowerbound(0)
-	for it.IsOk() {
-		item := signerDB.GetByIterator(it)
-		signers = append(signers, item)
-		it, _ = signerDB.Next(it)
-	}
+	signerDB := NewSignersTable(codeAccount, codeAccount)
+	signers := signerDB.Get()
+	check(signers != nil, "no signers")
 
-	threshold := len(signers)*2/3 + 1
+	threshold := len(signers.public_keys)*2/3 + 1
 	validSignatures := 0
 
-	verfiedSignatures := make([]*chain.Signature, 0, len(signers))
+	verfiedSignatures := make([]*chain.Signature, 0, len(signers.public_keys))
 
+	digest := chain.Sha256(data)
 	for i := 0; i < len(signatures); i++ {
 		signature := signatures[i]
 		CheckDuplicatedSignature(verfiedSignatures, &signature)
 		verfiedSignatures = append(verfiedSignatures, &signature)
 
 		pub_key := chain.RecoverKey(digest, &signature)
-		for _, signer := range signers {
-			if signer.public_key == *pub_key {
+		for _, public_key := range signers.public_keys {
+			if public_key == *pub_key {
 				validSignatures += 1
 				break
 			}

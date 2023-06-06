@@ -28,10 +28,9 @@ type TxLog struct {
 	timestamp uint64
 }
 
-// table signers
-type Signer struct {
-	account    chain.Name //primary : t.account.N
-	public_key chain.PublicKey
+// table signers singleton
+type Signers struct {
+	public_keys []chain.PublicKey
 }
 
 // table counters
@@ -50,19 +49,10 @@ func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
 }
 
 // action setup
-func (c *Contract) Setup(signers []Signer) {
-	db := NewSignerTable(c.self, c.self)
-	for {
-		it := db.Lowerbound(0)
-		if !it.IsOk() {
-			break
-		}
-		db.Remove(it)
-	}
-	for _, signer := range signers {
-		check(chain.IsAccount(signer.account), "contract account does not exists!")
-		db.Store(&signer, c.self)
-	}
+func (c *Contract) Setup(signers []chain.PublicKey) {
+	chain.RequireAuth(c.self)
+	db := NewSignersTable(c.self, c.self)
+	db.Set(&Signers{public_keys: signers}, c.self)
 }
 
 // action addprocess

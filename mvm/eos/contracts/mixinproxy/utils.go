@@ -9,36 +9,30 @@ const (
 	alphabet = "abcdefghijklmnopqrstuvwxyz12345"
 )
 
-// table signers ignore
-type Signer struct {
-	account    chain.Name //primary : t.account.N
-	public_key chain.PublicKey
+// table signers singleton
+type Signers struct {
+	public_keys []chain.PublicKey
 }
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
-	digest := chain.Sha256(data)
-	signerDB := NewSignerTable(MTG_XIN, MTG_XIN)
-	signers := make([]*Signer, 0, 10)
-	it := signerDB.Lowerbound(0)
-	for it.IsOk() {
-		item := signerDB.GetByIterator(it)
-		signers = append(signers, item)
-		it, _ = signerDB.Next(it)
-	}
+	signerTable := NewSignersTable(MTG_XIN, MTG_XIN)
+	signers := signerTable.Get()
+	check(signers != nil, "no signers")
 
-	threshold := len(signers)*2/3 + 1
+	threshold := len(signers.public_keys)*2/3 + 1
 	validSignatures := 0
 
-	verfiedSignatures := make([]*chain.Signature, 0, len(signers))
+	verfiedSignatures := make([]*chain.Signature, 0, len(signers.public_keys))
 
+	digest := chain.Sha256(data)
 	for i := 0; i < len(signatures); i++ {
 		signature := signatures[i]
 		CheckDuplicatedSignature(verfiedSignatures, &signature)
 		verfiedSignatures = append(verfiedSignatures, &signature)
 
 		pub_key := chain.RecoverKey(digest, &signature)
-		for _, signer := range signers {
-			if signer.public_key == *pub_key {
+		for _, public_key := range signers.public_keys {
+			if public_key == *pub_key {
 				validSignatures += 1
 				break
 			}

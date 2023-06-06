@@ -25,8 +25,8 @@ type ErrorTxEvent struct {
 // table pendingevts
 type PendingEvent struct {
 	event   TxEvent       //primary : t.event.nonce
-	account chain.Name    //IDX64: ByAccount : t.account.N : t.account.N
-	hash    chain.Uint256 //IDX256: ByHash : t.hash : t.hash
+	account uint64        //secondary
+	hash    chain.Uint256 //secondary
 }
 
 // table submittedevs
@@ -49,13 +49,13 @@ type AccountCache struct {
 // table bindaccounts
 type MixinAccount struct {
 	eos_account chain.Name    //primary : t.eos_account.N
-	client_id   chain.Uint128 //IDX128: ClientId : t.client_id : t.client_id
+	client_id   chain.Uint128 //secondary
 }
 
 // table mixinassets
 type MixinAsset struct {
 	symbol   chain.Symbol  //primary : t.symbol.Code()
-	asset_id chain.Uint128 //IDX128: AssetId : t.asset_id : t.asset_id
+	asset_id chain.Uint128 //secondary
 }
 
 // table transferfees

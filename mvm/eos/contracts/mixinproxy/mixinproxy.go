@@ -360,7 +360,7 @@ func (c *Contract) StorePendingEvent(account chain.Name, event *TxEvent) bool {
 		}
 		db := NewPendingEventTable(c.self, c.self)
 		hash := chain.NewUint256FromBytes(event.extra[1:33])
-		pendingEvent := PendingEvent{event: *event, account: account, hash: hash}
+		pendingEvent := PendingEvent{event: *event, account: account.N, hash: hash}
 		db.Store(&pendingEvent, c.self)
 		return true
 	}
@@ -557,7 +557,7 @@ func (c *Contract) SendAction(fromAccount chain.Name, action *chain.Action) {
 
 func (c *Contract) GetAccount(userId chain.Uint128) (chain.Name, bool) {
 	dbAccounts := NewMixinAccountTable(c.self, c.self)
-	idxTable := dbAccounts.GetIdxTableByClientId()
+	idxTable := dbAccounts.GetIdxTableByclient_id()
 	it2 := idxTable.Find(userId)
 	if !it2.IsOk() {
 		return chain.Name{}, false
@@ -574,7 +574,7 @@ func (c *Contract) GetAccount(userId chain.Uint128) (chain.Name, bool) {
 func (c *Contract) CreateNewAccount(from chain.Uint128) chain.Name {
 	var fromAccount chain.Name
 	dbAccounts := NewMixinAccountTable(c.self, c.self)
-	idxTable := dbAccounts.GetIdxTableByClientId()
+	idxTable := dbAccounts.GetIdxTableByclient_id()
 	it2 := idxTable.Find(from)
 	assert(!it2.IsOk(), "account already exists!!")
 	//		accountId := c.GetNextAccountId()
@@ -780,7 +780,7 @@ func (c *Contract) GetNextAvailableAccount() chain.Name {
 
 func (c *Contract) GetSymbol(assetId chain.Uint128) (chain.Symbol, bool) {
 	assetTable := NewMixinAssetTable(c.self, c.self)
-	idxTable := assetTable.GetIdxTableByAssetId()
+	idxTable := assetTable.GetIdxTableByasset_id()
 	itAssetId := idxTable.Find(assetId)
 	if !itAssetId.IsOk() {
 		return chain.Symbol{}, false
