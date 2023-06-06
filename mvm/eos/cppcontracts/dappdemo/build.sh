@@ -1,1 +1,1 @@
-eosio-cpp dappdemo.cpp
+cdt-cpp dappdemo.cpp

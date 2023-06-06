@@ -1,1 +1,1 @@
-eosio-cpp mixinproxy.cpp
+cdt-cpp mixinproxy.cpp

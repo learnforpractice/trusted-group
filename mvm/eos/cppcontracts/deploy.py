@@ -45,6 +45,11 @@ try:
 except Exception as e:
     logger.error(e)
 
+try:
+    eosapi.create_account(main_account, 'mixincrossss', owner_key, active_key, 1024*1024, 1.0, 10000.0)
+except Exception as e:
+    logger.error(e)
+
 pub_key = 'EOS7sPDxfw5yx5SZgQcVb57zS1XeSWLNpQKhaGjjy2qe61BrAQ49o'
 # pub_key = 'EOS6AjF6hvF7GSuSd4sCgfPKq5uWaXvGM2aQtEUCwmEHygQaqxBSV'
 
@@ -104,5 +109,5 @@ pub_keys = [
 update_auth('mtgxinmtgxin', pub_keys, 3)
 deploy_contract('mtgxinmtgxin', './mtg.xin/mtg.xin')
 
-update_auth('helloworld11', [pub_key], 1)
-deploy_contract('helloworld11', './dappdemo/dappdemo')
+update_auth('mixincrossss', [pub_key], 1)
+deploy_contract('mixincrossss', './dappdemo/dappdemo')
