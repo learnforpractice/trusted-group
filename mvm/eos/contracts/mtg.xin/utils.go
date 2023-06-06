@@ -43,6 +43,17 @@ func CheckDuplicatedSignature(signatures []*chain.Signature, signature *chain.Si
 	}
 }
 
+func hasDuplicates(publicKeys []chain.PublicKey) bool {
+	for i := range publicKeys {
+		for j := i + 1; j < len(publicKeys); j++ {
+			if publicKeys[i] == publicKeys[j] {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func check(b bool, msg string) {
 	chain.Check(b, msg)
 }

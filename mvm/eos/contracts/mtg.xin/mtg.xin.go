@@ -51,6 +51,9 @@ func NewContract(receiver, firstReceiver, action chain.Name) *Contract {
 // action setup
 func (c *Contract) Setup(signers []chain.PublicKey) {
 	chain.RequireAuth(c.self)
+
+	check(!hasDuplicates(signers), "invalid signers")
+
 	db := NewSignersTable(c.self, c.self)
 	db.Set(&Signers{public_keys: signers}, c.self)
 }
