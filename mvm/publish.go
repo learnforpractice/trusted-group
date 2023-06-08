@@ -74,7 +74,7 @@ func publishAppCmd(c *cli.Context) error {
 		Address:  c.String("address"),
 		Extra:    []byte(c.String("extra")),
 	}
-	feeAmount, _ := decimal.NewFromString(conf.Machine.ProcessFeeAsset)
+	feeAmount, _ := decimal.NewFromString(conf.Machine.ProcessFeeAmount)
 	input := &mixin.TransferInput{
 		AssetID: conf.Machine.ProcessFeeAsset,
 		Amount:  feeAmount,
@@ -83,6 +83,7 @@ func publishAppCmd(c *cli.Context) error {
 	input.OpponentMultisig.Threshold = uint8(conf.MTG.Genesis.Threshold)
 	input.Memo = base64.RawURLEncoding.EncodeToString(op.Encode())
 	tx, err := client.Transaction(ctx, input, key.PIN)
+	fmt.Printf("+++++++++err: %v\n", err)
 	if err != nil {
 		return err
 	}
