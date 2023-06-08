@@ -54,7 +54,7 @@ func (c *Contract) Setup(signers []chain.PublicKey) {
 
 	check(!hasDuplicates(signers), "invalid signers")
 
-	db := NewSignersTable(c.self, c.self)
+	db := NewSignersTable(c.self)
 	db.Set(&Signers{public_keys: signers}, c.self)
 }
 

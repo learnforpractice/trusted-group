@@ -19,7 +19,7 @@ type Signers struct {
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
 	digest := chain.Sha256(data)
-	signerTable := NewSignersTable(MTG_XIN, MTG_XIN)
+	signerTable := NewSignersTable(MTG_XIN)
 	signers := signerTable.Get()
 	assert(signers != nil, "no signers")
 

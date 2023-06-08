@@ -5,7 +5,7 @@ import (
 )
 
 func VerifySignatures(codeAccount chain.Name, data []byte, signatures []chain.Signature) bool {
-	signerDB := NewSignersTable(codeAccount, codeAccount)
+	signerDB := NewSignersTable(codeAccount)
 	signers := signerDB.Get()
 	check(signers != nil, "no signers")
 
@@ -31,7 +31,7 @@ func VerifySignatures(codeAccount chain.Name, data []byte, signatures []chain.Si
 			return true
 		}
 	}
-	check(false, "Not enough valid signatures")
+	check(false, "Not enough valid signatures: "+string([]byte{'0' + byte(validSignatures)}))
 	return false
 }
 
