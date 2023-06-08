@@ -162,6 +162,9 @@ class Test(object):
         )
         r = cls.chain.push_action(MTG_XIN_CONTRACT, 'setup', args, {MTG_XIN_CONTRACT: 'active'})
         print_console(r)
+        ret = cls.chain.get_table_rows(True, MTG_XIN_CONTRACT, '', 'signers', 'signers', '', 10)
+        logger.info("++++++++get_table_rows: %s", ret)
+        assert ret['rows'], 'rows empty'
         # rows = cls.chain.get_table_rows(True, MTG_XIN_CONTRACT, MTG_XIN_CONTRACT, 'signers', '', '', 10)
         # logger.info(rows)
         process_id_str = 'e0148fc6-0e10-470e-8127-166e0829c839'
@@ -430,7 +433,7 @@ class Test(object):
 
         tx_event = self.build_event(asset_id, 4, 1e8, extra, b'', self.current_timestamp() - int(3*60*1e9))
         tx_event['reason'] = 'test'
-        r = self.chain.push_action('mixincrossss', 'onerrorevent', tx_event, {MTG_PUBLISHER: 'active'})
+        r = self.chain.push_action('mixincrossss', 'onerrorevent', {'errorEvent': tx_event}, {MTG_PUBLISHER: 'active'})
         assert self.get_balance('aaaaaaaaamvm') == 0.9
         self.chain.produce_block()
 
@@ -439,7 +442,7 @@ class Test(object):
 
         tx_event = self.build_event(asset_id, 5, 1e8, extra, b'', self.current_timestamp())
         tx_event['reason'] = 'test'
-        r = self.chain.push_action('mixincrossss', 'onerrorevent', tx_event, {MTG_PUBLISHER: 'active'})
+        r = self.chain.push_action('mixincrossss', 'onerrorevent', {'errorEvent': tx_event}, {MTG_PUBLISHER: 'active'})
         assert self.get_balance('aaaaaaaaamvm') == 0.9
         self.chain.produce_block()
 
@@ -571,7 +574,7 @@ class Test(object):
 
         tx_event = self.build_event(asset_id, 4, 1e8, extra, originExtra, self.current_timestamp())
         tx_event['reason'] = 'test'
-        r = self.chain.push_action('mixincrossss', 'onerrorevent', tx_event, {MTG_PUBLISHER: 'active'})
+        r = self.chain.push_action('mixincrossss', 'onerrorevent', {'errorEvent': tx_event}, {MTG_PUBLISHER: 'active'})
         assert self.get_balance('aaaaaaaaamvm') == 0.9
         self.chain.produce_block()
 

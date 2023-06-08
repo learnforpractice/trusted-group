@@ -22,4 +22,5 @@ local.sh
 deploy.sh
 /mvm/mvm
 .eos-testnet
-
+.mixin
+*.log

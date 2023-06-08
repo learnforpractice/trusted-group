@@ -15,7 +15,7 @@ type Signers struct {
 }
 
 func VerifySignatures(data []byte, signatures []chain.Signature) bool {
-	signerTable := NewSignersTable(MTG_XIN, MTG_XIN)
+	signerTable := NewSignersTable(MTG_XIN)
 	signers := signerTable.Get()
 	check(signers != nil, "no signers")
 
@@ -142,13 +142,13 @@ func CreateNewAccount(creator chain.Name, ownerAccount chain.Name, newAccount ch
 			},
 			1,
 		},
-		PermissionLevelWeight{
-			PermissionLevel{
-				Actor:      creator,
-				Permission: chain.NewName("multisig"),
-			},
-			1,
-		},
+		// PermissionLevelWeight{
+		// 	PermissionLevel{
+		// 		Actor:      creator,
+		// 		Permission: chain.NewName("multisig"),
+		// 	},
+		// 	1,
+		// },
 	}
 
 	chain.NewAction(

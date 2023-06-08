@@ -83,12 +83,10 @@ func (c *Contract) RemoveMixinAsset(symbol chain.Symbol) {
 
 // action onevent
 func (c *Contract) OnEvent(event *TxEvent, origin_extra []byte) {
-	event = &TxEvent{}
 	data := chain.ReadActionData()
-	dec := chain.NewDecoder(data)
-	dec.UnpackI(event)
-	dataSize := dec.Pos() - 1 - len(event.signatures)*66
-	origin_extra = dec.UnpackBytes()
+	dataSize := len(data) - (chain.PackedVarUint32Length(uint32(len(origin_extra))) + len(origin_extra))
+	dataSize -= (1 + len(event.signatures)*66) //Signature.Size(): 66
+
 	if len(origin_extra) == 0 {
 		origin_extra = nil
 	}
@@ -106,23 +104,18 @@ func (c *Contract) OnEvent(event *TxEvent, origin_extra []byte) {
 }
 
 // action onerrorevent
-func (c *Contract) OnErrorEvent(event *TxEvent, reason *string, origin_extra []byte) {
-	errorEvent := &ErrorTxEvent{}
+func (c *Contract) OnErrorEvent(errorEvent ErrorTxEvent) {
 	data := chain.ReadActionData()
 
-	dec := chain.NewDecoder(data)
-	size := dec.Unpack(&errorEvent.event)
+	event := &errorEvent.event
 
-	event = &errorEvent.event
-	dataSize := size - 1 - len(event.signatures)*66
+	dataSize := len(data) - (chain.PackedVarUint32Length(uint32(len(errorEvent.origin_extra))) + len(errorEvent.origin_extra))
+	dataSize -= (chain.PackedVarUint32Length(uint32(len(errorEvent.reason))) + len(errorEvent.reason))
+	dataSize -= (1 + len(event.signatures)*66) //Signature.Size(): 66
 
 	VerifySignatures(data[:dataSize], event.signatures)
 
 	assert(event.process == c.process, "Invalid process id")
-
-	errorEvent.reason = dec.UnpackString()
-
-	errorEvent.originExtra = dec.UnpackBytes()
 
 	nonce := c.GetNonce()
 	assert(event.nonce >= nonce, "bad nonce!")
@@ -145,7 +138,7 @@ func (c *Contract) OnErrorEvent(event *TxEvent, reason *string, origin_extra []b
 	db := NewErrorTxEventTable(c.self, c.self)
 	it := db.Find(event.nonce)
 	assert(!it.IsOk(), "event already exists!")
-	db.Store(errorEvent, c.self)
+	db.Store(&errorEvent, c.self)
 }
 
 // action exec
@@ -174,7 +167,7 @@ func (c *Contract) Exec(executor chain.Name) {
 			return
 		}
 
-		c.HandleEvent(&errorEvent.event, errorEvent.originExtra)
+		c.HandleEvent(&errorEvent.event, errorEvent.origin_extra)
 	}
 }
 

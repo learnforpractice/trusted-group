@@ -17,9 +17,9 @@ type TxEvent struct {
 
 // table errorevents
 type ErrorTxEvent struct {
-	event       TxEvent //primary : t.event.nonce
-	reason      string
-	originExtra []byte
+	event        TxEvent //primary : t.event.nonce
+	reason       string
+	origin_extra []byte
 }
 
 // table pendingevts
