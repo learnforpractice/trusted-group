@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -18,6 +17,7 @@ logger = log.get_logger(__name__)
 main_account = 'helloworld11'
 # modify your test account private key here
 wallet.import_key('test', '5JRYimgLBrRLCBAcjHUWCYRv3asNedTYYzVgmiU4q2ZVxMBiJXL')
+#EOS7sPDxfw5yx5SZgQcVb57zS1XeSWLNpQKhaGjjy2qe61BrAQ49o
 wallet.import_key('test', '5Jbb4wuwz8MAzTB9FJNmrVYGXo4ABb7wqPVoWGcZ6x8V2FwNeDo')
 
 # {'private': '5JpXLb1tqxJB3Xtzd584xTdqKAzBnQ4TkqfEtT5QPotuv7Yt2bX', 'public': 'PUB_K1_7rVXEPKJsYbjW3KZpaLBnpTx7U3XTdKedEWfPpj2mF9jTixBDr'}
@@ -133,9 +133,12 @@ pub_keys = [
 ]
 
 deploy_contract('mtgxinmtgxin', './mtg.xin/mtg.xin')
-
 deploy_contract('mixinwtokens', './mixinproxy/token/token')
 deploy_contract('mixincrossss', './mixinproxy/mixinproxy')
+
+r = eosapi.push_action('mtgxinmtgxin', 'setup', {'signers': pub_keys}, {'mtgxinmtgxin': 'active'})
+r = eosapi.push_action('mixincrossss', 'initialize', b'', {'mixincrossss': 'active'})
+# TODO setfee
 
 update_auth('mixinmanager', pub_keys=pub_keys, threshold=3)
 update_auth('mixinmanager', parent='', permission='owner', pub_keys=pub_keys, threshold=3)
