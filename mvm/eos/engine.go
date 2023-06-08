@@ -45,18 +45,19 @@ var (
 )
 
 type Configuration struct {
-	Store          string   `toml:"store"`
-	RPCPush        string   `toml:"rpc-push"`
-	RPCGetState    string   `toml:"rpc-get-state"`
-	PrivateKey     string   `toml:"key"`
-	MixinContract  string   `toml:"mixin-contract"`
-	MTGPublisher   string   `toml:"mtg-publisher"`
-	MTGExecutor    string   `toml:"mtg-executor"`
-	MTGExecutorKey string   `toml:"mtg-executor-key"`
-	ChainId        string   `toml:"chain-id"`
-	PublicKeys     []string `toml:"public-keys"`
-	Publisher      bool     `toml:"publisher"`
-	StartBlockNum  uint64   `toml:"start-block-num"`
+	Store           string   `toml:"store"`
+	RPCPush         string   `toml:"rpc-push"`
+	RPCGetState     string   `toml:"rpc-get-state"`
+	PrivateKey      string   `toml:"key"`
+	MixinContract   string   `toml:"mixin-contract"`
+	MTGPublisher    string   `toml:"mtg-publisher"`
+	MTGPublisherKey string   `toml:"mtg-publisher-key"`
+	MTGExecutor     string   `toml:"mtg-executor"`
+	MTGExecutorKey  string   `toml:"mtg-executor-key"`
+	ChainId         string   `toml:"chain-id"`
+	PublicKeys      []string `toml:"public-keys"`
+	Publisher       bool     `toml:"publisher"`
+	StartBlockNum   uint64   `toml:"start-block-num"`
 }
 
 type Engine struct {
@@ -65,6 +66,7 @@ type Engine struct {
 	chainApiGetState     *chain.ChainApi
 	mixinContract        string
 	mtgPublisherContract string
+	mtgPublisherKey      *secp256k1.PrivateKey
 	mtgExecutor          string
 	mtgExecutorKey       *secp256k1.PrivateKey
 	chainId              *chain.Bytes32
@@ -101,8 +103,17 @@ func Boot(conf *Configuration, threshold int) (*Engine, error) {
 
 	key, err := secp256k1.NewPrivateKeyFromBase58(conf.PrivateKey)
 	if err != nil {
-		panic(fmt.Errorf("Invalid private key: %s", conf.PrivateKey))
+		panic(fmt.Errorf("Invalid private key: %s, err: %v", conf.PrivateKey, err))
 	}
+
+	var publisherKey *secp256k1.PrivateKey
+	if conf.MTGPublisher != "" {
+		publisherKey, err = secp256k1.NewPrivateKeyFromBase58(conf.MTGPublisherKey)
+		if err != nil {
+			panic(fmt.Errorf("Invalid private key: %s", conf.PrivateKey))
+		}
+	}
+
 	pubKey := key.GetPublicKey()
 	pubKeyVerified := false
 
@@ -165,6 +176,7 @@ func Boot(conf *Configuration, threshold int) (*Engine, error) {
 		chainApiGetState:     chain.NewChainApi(conf.RPCGetState),
 		mixinContract:        conf.MixinContract,
 		mtgPublisherContract: conf.MTGPublisher,
+		mtgPublisherKey:      publisherKey,
 		mtgExecutor:          conf.MTGExecutor,
 		mtgExecutorKey:       executorKey,
 		chainId:              _chainId,
@@ -295,7 +307,8 @@ func (e *Engine) VerifySignature(digest *chain.Bytes32, signature *secp256k1.Sig
 func (e *Engine) checkNetworkStatus() {
 	info, err := e.chainApiGetState.GetInfo()
 	if err != nil {
-		panic(err)
+		logger.Verbosef("%v", err)
+		return
 	}
 	e.SetLatestChainInfo(info)
 
@@ -318,7 +331,9 @@ func (e *Engine) syncNetwork() {
 	for {
 		info, err := e.chainApiGetState.GetInfo()
 		if err != nil {
-			panic(err)
+			logger.Verbosef("%v", err)
+			time.Sleep(time.Second * 5)
+			continue
 		}
 		e.SetLatestChainInfo(info)
 
@@ -339,7 +354,7 @@ func (e *Engine) syncNetwork() {
 func (e *Engine) loopCheckNetworkStatus() {
 	for {
 		e.checkNetworkStatus()
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 	}
 }
 
@@ -380,8 +395,9 @@ func (e *Engine) loopContractEvents() {
 	for {
 		err := e.PullContractEvents()
 		if err != nil {
+			time.Sleep(time.Second * 3)
 			if err == ErrorNotIrreversible {
-				time.Sleep(time.Second * 3)
+				// time.Sleep(time.Second * 3)
 			} else {
 				logger.Verbosef("PullContractEvents return error: %v", err)
 			}
@@ -1089,7 +1105,7 @@ func (e *Engine) pushEvent(address string, evt *encoding.Event, errorEvent bool)
 		return err
 	}
 
-	signature, err := tx.Sign(e.key, e.chainId)
+	signature, err := tx.Sign(e.mtgPublisherKey, e.chainId)
 	if err != nil {
 		return err
 	}
@@ -1116,7 +1132,7 @@ func (e *Engine) pushEvent(address string, evt *encoding.Event, errorEvent bool)
 			return err
 		}
 
-		signature, err := tx.Sign(e.key, e.chainId)
+		signature, err := tx.Sign(e.mtgPublisherKey, e.chainId)
 		if err != nil {
 			return err
 		}
