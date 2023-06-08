@@ -488,6 +488,9 @@ func NewAddProcess(address string, process string, signatures []byte) *AddProces
 	copy(addprocess.process[:], uuidToBytes(process))
 
 	addprocess.signatures = make([]secp256k1.Signature, len(signatures)/65)
+	if len(signatures) != 0 && len(signatures)%65 != 1 {
+		panic("invalid signatures!")
+	}
 	for i := 0; i < len(signatures)/65; i++ {
 		copy(addprocess.signatures[i].Data[:], signatures[i*65:i*65+65])
 	}
