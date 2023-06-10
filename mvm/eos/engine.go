@@ -45,42 +45,42 @@ var (
 )
 
 type Configuration struct {
-	Store           string   `toml:"store"`
-	RPCPush         string   `toml:"rpc-push"`
-	RPCGetState     string   `toml:"rpc-get-state"`
-	PrivateKey      string   `toml:"key"`
-	MixinContract   string   `toml:"mixin-contract"`
-	MTGPublisher    string   `toml:"mtg-publisher"`
-	MTGPublisherKey string   `toml:"mtg-publisher-key"`
-	MTGExecutor     string   `toml:"mtg-executor"`
-	MTGExecutorKey  string   `toml:"mtg-executor-key"`
-	ChainId         string   `toml:"chain-id"`
-	PublicKeys      []string `toml:"public-keys"`
-	Publisher       bool     `toml:"publisher"`
-	StartBlockNum   uint64   `toml:"start-block-num"`
+	Store               string   `toml:"store"`
+	RPCPush             string   `toml:"rpc-push"`
+	RPCGetState         string   `toml:"rpc-get-state"`
+	PrivateKey          string   `toml:"key"`
+	MixinContract       string   `toml:"mixin-contract"`
+	MTGPublisherAccount string   `toml:"mtg-publisher-account"`
+	MTGPublisherKey     string   `toml:"mtg-publisher-key"`
+	MTGExecutorAccount  string   `toml:"mtg-executor-account"`
+	MTGExecutorKey      string   `toml:"mtg-executor-key"`
+	ChainId             string   `toml:"chain-id"`
+	PublicKeys          []string `toml:"public-keys"`
+	Publisher           bool     `toml:"publisher"`
+	StartBlockNum       uint64   `toml:"start-block-num"`
 }
 
 type Engine struct {
-	db                   *badger.DB
-	chainApiPush         *chain.ChainApi
-	chainApiGetState     *chain.ChainApi
-	mixinContract        string
-	mtgPublisherContract string
-	mtgPublisherKey      *secp256k1.PrivateKey
-	mtgExecutor          string
-	mtgExecutorKey       *secp256k1.PrivateKey
-	chainId              *chain.Bytes32
-	key                  *secp256k1.PrivateKey
-	publicKeys           []*secp256k1.PublicKey
-	publisher            bool
-	threshold            int
-	lastChainInfo        *chain.ChainInfo
-	mutex                *sync.Mutex
-	lastIrrBlockTime     time.Time
-	lastIrrBlockId       string
-	eventStatus          map[uint64]time.Time
-	startBlockNum        uint64
-	extraRequestClient   *http.Client
+	db                  *badger.DB
+	chainApiPush        *chain.ChainApi
+	chainApiGetState    *chain.ChainApi
+	mixinContract       string
+	mtgPublisherAccount string
+	mtgPublisherKey     *secp256k1.PrivateKey
+	mtgExecutorAccount  string
+	mtgExecutorKey      *secp256k1.PrivateKey
+	chainId             *chain.Bytes32
+	key                 *secp256k1.PrivateKey
+	publicKeys          []*secp256k1.PublicKey
+	publisher           bool
+	threshold           int
+	lastChainInfo       *chain.ChainInfo
+	mutex               *sync.Mutex
+	lastIrrBlockTime    time.Time
+	lastIrrBlockId      string
+	eventStatus         map[uint64]time.Time
+	startBlockNum       uint64
+	extraRequestClient  *http.Client
 }
 
 type ExtendedAction struct {
@@ -104,14 +104,6 @@ func Boot(conf *Configuration, threshold int) (*Engine, error) {
 	key, err := secp256k1.NewPrivateKeyFromBase58(conf.PrivateKey)
 	if err != nil {
 		panic(fmt.Errorf("Invalid private key: %s, err: %v", conf.PrivateKey, err))
-	}
-
-	var publisherKey *secp256k1.PrivateKey
-	if conf.MTGPublisher != "" {
-		publisherKey, err = secp256k1.NewPrivateKeyFromBase58(conf.MTGPublisherKey)
-		if err != nil {
-			panic(fmt.Errorf("Invalid private key: %s", conf.PrivateKey))
-		}
 	}
 
 	pubKey := key.GetPublicKey()
@@ -138,26 +130,43 @@ func Boot(conf *Configuration, threshold int) (*Engine, error) {
 		panic("mixin-contract not specified!")
 	}
 
+	var executorKey *secp256k1.PrivateKey
+	var publisherKey *secp256k1.PrivateKey
+
 	if conf.Publisher {
 		if conf.RPCPush == "" {
 			panic("rpc-push not specified!")
 		}
-	}
 
-	if conf.MTGPublisher == "" {
-		panic("mtg-publisher not specified!")
-	}
+		if conf.MTGPublisherAccount == "" {
+			panic("mtg-publisher-account not specified!")
+		}
 
-	if conf.RPCGetState == "" {
-		panic("rpc-get-state not specified!")
-	}
+		if conf.MTGPublisherKey == "" {
+			panic("mtg-publisher-key not specified!")
+		}
 
-	var executorKey *secp256k1.PrivateKey
-	if conf.MTGExecutor != "" {
+		if conf.MTGExecutorAccount == "" {
+			panic("mtg-executor-account not specified!")
+		}
+
+		if conf.MTGExecutorKey == "" {
+			panic("mtg-executor-key not specified!")
+		}
+
 		executorKey, err = secp256k1.NewPrivateKeyFromBase58(conf.MTGExecutorKey)
 		if err != nil {
 			panic(fmt.Errorf("Invalid mtg-executor-key: %s", conf.MTGExecutorKey))
 		}
+
+		publisherKey, err = secp256k1.NewPrivateKeyFromBase58(conf.MTGPublisherKey)
+		if err != nil {
+			panic(fmt.Errorf("Invalid private key: %s", conf.PrivateKey))
+		}
+	}
+
+	if conf.RPCGetState == "" {
+		panic("rpc-get-state not specified!")
 	}
 
 	logger.Verbosef("++++conf.Publisher: %v", conf.Publisher)
@@ -171,23 +180,23 @@ func Boot(conf *Configuration, threshold int) (*Engine, error) {
 	client := &http.Client{Transport: tr}
 
 	e := &Engine{
-		db:                   db,
-		chainApiPush:         chain.NewChainApi(conf.RPCPush),
-		chainApiGetState:     chain.NewChainApi(conf.RPCGetState),
-		mixinContract:        conf.MixinContract,
-		mtgPublisherContract: conf.MTGPublisher,
-		mtgPublisherKey:      publisherKey,
-		mtgExecutor:          conf.MTGExecutor,
-		mtgExecutorKey:       executorKey,
-		chainId:              _chainId,
-		key:                  key,
-		publicKeys:           pubs,
-		publisher:            conf.Publisher,
-		threshold:            threshold,
-		mutex:                new(sync.Mutex),
-		eventStatus:          make(map[uint64]time.Time),
-		startBlockNum:        conf.StartBlockNum,
-		extraRequestClient:   client,
+		db:                  db,
+		chainApiPush:        chain.NewChainApi(conf.RPCPush),
+		chainApiGetState:    chain.NewChainApi(conf.RPCGetState),
+		mixinContract:       conf.MixinContract,
+		mtgPublisherAccount: conf.MTGPublisherAccount,
+		mtgPublisherKey:     publisherKey,
+		mtgExecutorAccount:  conf.MTGExecutorAccount,
+		mtgExecutorKey:      executorKey,
+		chainId:             _chainId,
+		key:                 key,
+		publicKeys:          pubs,
+		publisher:           conf.Publisher,
+		threshold:           threshold,
+		mutex:               new(sync.Mutex),
+		eventStatus:         make(map[uint64]time.Time),
+		startBlockNum:       conf.StartBlockNum,
+		extraRequestClient:  client,
 	}
 
 	if e.key != nil {
@@ -506,7 +515,7 @@ func (e *Engine) PullContractEvents() error {
 	if curBlockNum < e.startBlockNum {
 		curBlockNum = e.startBlockNum
 	}
-	if curBlockNum%100 == 0 {
+	if curBlockNum%600 == 0 {
 		logger.Verbosef("+++++++++++++current block num %d", curBlockNum)
 	}
 	actions, err := e.FetchActions(curBlockNum)
@@ -543,7 +552,7 @@ func (e *Engine) IsPublisher() bool {
 }
 
 func (e *Engine) IsExecutor() bool {
-	return e.mtgExecutor != "" && e.mtgExecutorKey != nil
+	return e.mtgExecutorAccount != "" && e.mtgExecutorKey != nil
 }
 
 func (e *Engine) GetTxRequestsCount() (uint64, error) {
@@ -621,7 +630,7 @@ func (e *Engine) loopExecGroupEvents(address string) {
 		return
 	}
 
-	executor := chain.NewName(e.mtgExecutor)
+	executor := chain.NewName(e.mtgExecutorAccount)
 	counter := uint64(0)
 	for {
 		tx := chain.NewTransaction(uint32(time.Now().Unix()) + TX_EXPIRATION)
@@ -710,7 +719,7 @@ func (e *Engine) execPendingEvent(address string, nonce uint64, url string, hash
 		return fmt.Errorf("Invalid original data hash: %x %x", digest, hash)
 	}
 
-	executor := chain.NewName(e.mtgExecutor)
+	executor := chain.NewName(e.mtgExecutorAccount)
 	refBlockId := e.GetRefBlockId()
 	tx.SetReferenceBlock(refBlockId)
 	action := chain.NewAction(
@@ -779,7 +788,7 @@ func (e *Engine) loopDoWorks(address string) {
 		return
 	}
 
-	executor := chain.NewName(e.mtgExecutor)
+	executor := chain.NewName(e.mtgExecutorAccount)
 	counter := uint64(0)
 	for {
 		time.Sleep(time.Second * 5)
@@ -1100,7 +1109,7 @@ func (e *Engine) pushEvent(address string, evt *encoding.Event, errorEvent bool)
 	refBlockId := e.GetRefBlockId()
 	originExtra := e.getOriginExtra(evt.Extra)
 
-	tx, err := BuildEventTransaction(e.mixinContract, e.mtgPublisherContract, address, evt, refBlockId, originExtra)
+	tx, err := BuildEventTransaction(e.mixinContract, e.mtgPublisherAccount, address, evt, refBlockId, originExtra)
 	if err != nil {
 		return err
 	}
@@ -1127,7 +1136,7 @@ func (e *Engine) pushEvent(address string, evt *encoding.Event, errorEvent bool)
 		if len(reason) > 256 {
 			reason = reason[:256]
 		}
-		tx, err := BuildErrorEventTransaction(e.mtgPublisherContract, address, evt, refBlockId, reason, originExtra)
+		tx, err := BuildErrorEventTransaction(e.mtgPublisherAccount, address, evt, refBlockId, reason, originExtra)
 		if err != nil {
 			return err
 		}

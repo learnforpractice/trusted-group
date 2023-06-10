@@ -118,7 +118,7 @@ func (c *Contract) OnErrorEvent(errorEvent ErrorTxEvent) {
 	assert(event.process == c.process, "Invalid process id")
 
 	nonce := c.GetNonce()
-	assert(event.nonce >= nonce, "bad nonce!")
+	assert(event.nonce >= nonce, "OnErrorEvent: bad nonce!")
 
 	c.StoreNonce(event.nonce)
 
@@ -391,7 +391,7 @@ func (c *Contract) AddFee(fee *chain.Asset) {
 
 func (c *Contract) CheckNonce(eventNonce uint64) {
 	nonce := c.GetNonce()
-	assert(eventNonce >= nonce, "bad nonce!")
+	assert(eventNonce >= nonce, "CheckNonce: bad nonce!")
 
 	db := NewSubmittedEventTable(c.self, c.self)
 	it := db.Find(eventNonce)

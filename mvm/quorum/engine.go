@@ -72,8 +72,6 @@ func (e *Engine) VerifyAddress(address string, _ []byte) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO ABI
 	return nil
 }
 
